@@ -4,14 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Conveyance App</title>
-    <!-- Tailwind CSS for modern UI -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- jsPDF and AutoTable for PDF generation -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
-    <!-- Font Awesome for icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;600;700;900&display=swap');
         body { font-family: 'Public Sans', sans-serif; -webkit-tap-highlight-color: transparent; }
@@ -22,7 +18,6 @@
 </head>
 <body class="bg-slate-50 min-h-screen">
 
-    <!-- Header Section -->
     <header class="bg-white border-b border-slate-200 px-5 py-4 sticky top-0 z-50">
         <div class="max-w-md mx-auto flex justify-between items-center">
             <div>
@@ -36,10 +31,8 @@
     </header>
 
     <main class="max-w-md mx-auto p-5">
-        <!-- Month Filter -->
         <input type="month" id="monthFilter" onchange="renderList()" class="w-full p-4 rounded-2xl bg-white border border-slate-200 shadow-sm font-bold text-slate-700 mb-6 focus:ring-2 focus:ring-blue-500 outline-none">
 
-        <!-- Total Bill Blue Card -->
         <div class="blue-card rounded-[2.5rem] p-8 shadow-2xl text-white relative overflow-hidden mb-8">
             <div class="relative z-10 flex justify-between items-center">
                 <div>
@@ -57,12 +50,10 @@
         <div id="expenseList" class="space-y-4"></div>
     </main>
 
-    <!-- FAB (Floating Action Button) for Add Entry -->
     <button onclick="openModal()" class="fixed bottom-6 right-6 bg-blue-600 text-white w-16 h-16 rounded-[1.5rem] shadow-2xl flex items-center justify-center text-2xl active:scale-90 transition-all z-40">
         <i class="fas fa-plus"></i>
     </button>
 
-    <!-- Modal for New Entry -->
     <div id="modal" class="fixed inset-0 bg-slate-900/60 hidden flex items-end sm:items-center justify-center z-[60] p-0 sm:p-4 backdrop-blur-sm">
         <div class="bg-white rounded-t-[3rem] sm:rounded-3xl w-full max-w-sm p-8 shadow-2xl overflow-y-auto max-h-[90vh]">
             <div class="flex justify-between items-center mb-8">
@@ -105,216 +96,160 @@
     </div>
 
     <script>
-        // !! IMPORTANT: Replace with your actual Google Apps Script Web App URL !!
         const API_URL = 'https://script.google.com/macros/s/AKfycbySHmNzBC5qppUXJH-ByszRg8NhHu7jFdxQZb7F0UZeimCiabPWVy6vgdshrRIF6sz3Jw/exec';
-        let expenses = []; // Global array to store fetched data
+        let expenses = [];
 
-        // --- Initialization ---
         window.onload = () => {
             const now = new Date();
-            // Set default month filter to current month
             document.getElementById('monthFilter').value = now.toISOString().substring(0, 7);
-            // Set default date in the modal to today
             document.getElementById('date').valueAsDate = now;
-            loadData(); // Load data on app start
+            loadData();
         };
 
-        // --- UI Logic: Toggle fields based on expense type ---
         function handleTypeChange() {
             const type = document.getElementById('type').value;
-            const transportFields = document.getElementById('transportFields');
-            const mealField = document.getElementById('mealField');
-            const roundTripField = document.getElementById('roundTripField');
-            
+            const trans = document.getElementById('transportFields');
+            const meal = document.getElementById('mealField');
+            const rt = document.getElementById('roundTripField');
             if (type === 'Meal') {
-                transportFields.classList.add('hidden');
-                roundTripField.classList.add('hidden');
-                mealField.classList.remove('hidden');
-                document.getElementById('from').removeAttribute('required'); // No 'From'/'To' for meals
-                document.getElementById('to').removeAttribute('required');
+                trans.classList.add('hidden'); rt.classList.add('hidden'); meal.classList.remove('hidden');
             } else {
-                transportFields.classList.remove('hidden');
-                roundTripField.classList.remove('hidden');
-                mealField.classList.add('hidden');
-                document.getElementById('from').setAttribute('required', 'true');
-                document.getElementById('to').setAttribute('required', 'true');
+                trans.classList.remove('hidden'); rt.classList.remove('hidden'); meal.classList.add('hidden');
             }
         }
 
-        // --- Data Fetching from Google Sheet ---
         async function loadData() {
             const list = document.getElementById('expenseList');
-            // Show a loading spinner
             list.innerHTML = `<div class="flex justify-center py-20"><div class="loader rounded-full border-4 border-slate-200 h-10 w-10"></div></div>`;
             try {
-                // Add cache-buster to API call to ensure fresh data
-                const res = await fetch(`${API_URL}?t=${Date.now()}`); 
+                const res = await fetch(`${API_URL}?t=${Date.now()}`);
                 expenses = await res.json();
-                renderList(); // Render the fetched data
-            } catch (e) { 
-                list.innerHTML = `<p class="text-center font-bold text-red-400">Connection Error. Please try again.</p>`;
-                alert("Could not load data. Check your internet connection or API URL.");
-            }
+                renderList();
+            } catch (e) { list.innerHTML = `<p class="text-center font-bold text-red-400">Connection Error</p>`; }
         }
 
-        // --- Helper: Format YYYY-MM-DD date string to a friendly format ---
         function formatD(dateStr) {
-            if (!dateStr) return "";
+            if(!dateStr) return "";
             const parts = dateStr.split('-');
-            // Construct date to avoid timezone issues: YYYY, MM-1, DD
-            const date = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
-            return date.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+            const d = new Date(parseInt(parts[0]), parseInt(parts[1])-1, parseInt(parts[2]));
+            return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
         }
 
-        // --- UI Logic: Render the list of expenses for the selected month ---
         function renderList() {
             const selMonth = document.getElementById('monthFilter').value;
             const list = document.getElementById('expenseList');
-            const totalDisplay = document.getElementById('monthTotal');
-            
-            // Format month label for header and list heading
-            const [year, month] = selMonth.split('-');
-            const monthLabel = new Date(year, month - 1).toLocaleString('default', { month: 'long', year: 'numeric' });
-            document.getElementById('headerMonth').innerText = monthLabel.toUpperCase();
-            document.getElementById('listHeading').innerText = `${monthLabel} Log`;
+            const [y, m] = selMonth.split('-');
+            const mLabel = new Date(y, m-1).toLocaleString('default', { month: 'long', year: 'numeric' });
+            document.getElementById('headerMonth').innerText = mLabel.toUpperCase();
+            document.getElementById('listHeading').innerText = `${mLabel} Log`;
 
-            // Filter expenses for the selected month and sort by date descending
-            const filtered = expenses.filter(item => item.Date.startsWith(selMonth))
-                                     .sort((a, b) => new Date(b.Date) - new Date(a.Date));
+            const filtered = expenses.filter(item => item.Date.startsWith(selMonth)).sort((a,b) => new Date(b.Date) - new Date(a.Date));
             
             let total = 0;
             let html = "";
-            let processedTripIds = new Set(); // To ensure round trips are only rendered once
-
-            if (filtered.length === 0) {
-                list.innerHTML = `<p class="text-center py-20 text-slate-300 font-bold">No Records for ${monthLabel}</p>`;
-            }
+            let processedTripIds = new Set();
 
             filtered.forEach(item => {
-                // Skip the second leg of a round trip as we combine them
                 if (item.TripID && processedTripIds.has(item.TripID)) return;
                 
                 const cost = parseFloat(item.Cost || 0);
                 total += cost;
 
-                let iconHtml = '';
-                let contentHtml = '';
-                let deleteId = item.RowID; // Default delete by RowID
-                let deleteTripId = ''; // Used for round trips
+                let icon = '<i class="fas fa-motorcycle"></i>';
+                let content = "";
+                let delRow = item.RowID;
+                let delTrip = "";
 
-                // Logic for displaying different card types
                 if (item.Type === "Meal") {
-                    iconHtml = '<i class="fas fa-utensils"></i>';
-                    contentHtml = `<p class="font-black text-slate-800 text-lg">${item.MealDesc || 'Meal'}</p>`;
+                    icon = '<i class="fas fa-utensils"></i>';
+                    content = `<p class="font-black text-slate-800 text-lg">${item.MealDesc || 'Meal'}</p>`;
                 } else if (item.isRoundTrip === "YES" && item.TripID) {
-                    processedTripIds.add(item.TripID); // Mark this trip as processed
-                    iconHtml = '<i class="fas fa-route"></i>';
-                    contentHtml = `<p class="font-bold text-slate-800 text-sm leading-tight">${item.From} <span class="text-blue-500">↔</span> ${item.To}</p>
-                                   <p class="text-[10px] text-blue-600 font-black mt-1 uppercase">ROUND TRIP • ${item.Type}</p>`;
-                    deleteTripId = item.TripID; // Delete by TripID for round trips
-                } else { // Single trip
-                    iconHtml = '<i class="fas fa-location-arrow"></i>';
-                    contentHtml = `<p class="font-black text-slate-800 text-lg">${item.From} → ${item.To}</p>
-                                   <p class="text-[10px] text-slate-400 font-bold uppercase">${item.Type}</p>`;
+                    processedTripIds.add(item.TripID);
+                    icon = '<i class="fas fa-route"></i>';
+                    content = `<p class="font-bold text-slate-800 text-sm leading-tight">${item.From} <span class="text-blue-500">↔</span> ${item.To}</p>
+                               <p class="text-[10px] text-blue-600 font-black mt-1 uppercase">ROUND TRIP • ${item.Type}</p>`;
+                    delTrip = item.TripID;
+                } else {
+                    icon = '<i class="fas fa-location-arrow"></i>';
+                    content = `<p class="font-black text-slate-800 text-lg">${item.From} → ${item.To}</p>
+                               <p class="text-[10px] text-slate-400 font-bold uppercase">${item.Type}</p>`;
                 }
 
                 html += `
                     <div class="bg-white p-5 rounded-[2rem] shadow-sm border border-slate-200 flex items-center">
-                        <div class="w-12 h-12 rounded-2xl bg-slate-50 text-slate-400 flex items-center justify-center text-xl">${iconHtml}</div>
+                        <div class="w-12 h-12 rounded-2xl bg-slate-50 text-slate-400 flex items-center justify-center text-xl">${icon}</div>
                         <div class="flex-1 ml-4 overflow-hidden">
                             <p class="text-[10px] text-slate-400 font-black uppercase mb-1">${formatD(item.Date)}</p>
-                            ${contentHtml}
+                            ${content}
                         </div>
                         <div class="text-right flex items-center gap-4">
                             <span class="font-black text-slate-900 text-xl tracking-tight">৳${cost || '-'}</span>
-                            <button onclick="deleteEntry('${deleteId}', '${deleteTripId}')" class="w-10 h-10 rounded-xl bg-red-50 text-red-200 hover:text-red-500 flex items-center justify-center transition-colors">
+                            <button onclick="deleteEntry('${delRow}', '${delTrip}')" class="w-10 h-10 rounded-xl bg-red-50 text-red-200 hover:text-red-500 flex items-center justify-center transition-colors">
                                 <i class="fas fa-trash-alt"></i>
                             </button>
                         </div>
                     </div>`;
             });
-            list.innerHTML = html;
-            totalDisplay.innerText = `৳ ${total}`;
+            list.innerHTML = html || `<p class="text-center py-20 text-slate-300 font-bold">No Records</p>`;
+            document.getElementById('monthTotal').innerText = `৳ ${total}`;
         }
 
-        // --- Data Action: Delete an entry/trip ---
         async function deleteEntry(rowId, tripId) {
-            if (!confirm("Are you sure you want to delete this record(s)? This cannot be undone.")) return;
-            
-            // Show loading state on the button clicked
-            event.currentTarget.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
-            event.currentTarget.disabled = true;
+            if(!confirm("Delete this entry permanently?")) return;
+            const btn = event.currentTarget;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+            btn.disabled = true;
 
             try {
-                // Send both rowId and tripId; backend decides how to delete
-                await fetch(API_URL, { 
+                const res = await fetch(API_URL, { 
                     method: 'POST', 
                     body: JSON.stringify({ action: 'DELETE', rowId: rowId, tripId: tripId }) 
                 });
-                loadData(); // Reload data to reflect changes
-            } catch (e) {
-                alert("Deletion failed. Check internet connection.");
-                loadData(); // Reload to reset button state
+                const text = await res.text();
+                if(text === "Deleted") {
+                    loadData();
+                } else {
+                    alert("Delete failed on server.");
+                    loadData();
+                }
+            } catch (e) { 
+                alert("Network error during delete.");
+                loadData();
             }
         }
 
-        // --- Data Action: Add a new expense entry ---
         document.getElementById('expenseForm').onsubmit = async (e) => {
             e.preventDefault();
-            const saveBtn = document.getElementById('saveBtn');
-            saveBtn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> SAVING...';
-            saveBtn.disabled = true;
-
-            const data = {
-                date: document.getElementById('date').value,
-                from: document.getElementById('from').value,
-                to: document.getElementById('to').value,
-                type: document.getElementById('type').value,
-                cost: document.getElementById('cost').value,
-                mealDesc: document.getElementById('mealDesc').value, // Will be empty for non-meal
-                isRoundTrip: document.getElementById('isRoundTrip').checked ? "YES" : "NO"
-            };
-
-            try {
-                await fetch(API_URL, { method: 'POST', body: JSON.stringify(data) });
-                closeModal(); // Close modal on success
-                // Reset form fields
-                document.getElementById('expenseForm').reset();
-                document.getElementById('date').valueAsDate = new Date(); // Set date back to today
-                loadData(); // Reload data to show new entry
-            } catch (e) {
-                alert("Failed to save entry. Please try again.");
-            } finally {
-                saveBtn.innerText = 'Save Entry';
-                saveBtn.disabled = false;
-            }
+            const btn = document.getElementById('saveBtn');
+            btn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> SAVING...';
+            btn.disabled = true;
+            const data = { date: document.getElementById('date').value, from: document.getElementById('from').value, to: document.getElementById('to').value, type: document.getElementById('type').value, cost: document.getElementById('cost').value, mealDesc: document.getElementById('mealDesc').value, isRoundTrip: document.getElementById('isRoundTrip').checked ? "YES" : "NO" };
+            await fetch(API_URL, { method: 'POST', body: JSON.stringify(data) });
+            closeModal();
+            btn.innerText = 'Save Entry'; btn.disabled = false;
+            document.getElementById('expenseForm').reset();
+            loadData();
         };
 
-        // --- UI Logic: Modal controls ---
         function openModal() { document.getElementById('modal').classList.remove('hidden'); handleTypeChange(); }
         function closeModal() { document.getElementById('modal').classList.add('hidden'); }
 
-        // --- PDF Generation ---
         function generatePDF() {
             const selMonth = document.getElementById('monthFilter').value;
-            // Sort ascending for the official report
-            const filtered = expenses.filter(item => item.Date.startsWith(selMonth))
-                                     .sort((a, b) => new Date(a.Date) - new Date(b.Date));
-            
-            if (!filtered.length) return alert("No data to export for the selected month.");
+            const filtered = expenses.filter(item => item.Date.startsWith(selMonth)).sort((a,b) => new Date(a.Date) - new Date(b.Date));
+            if(!filtered.length) return alert("No data to export.");
 
             const { jsPDF } = window.jspdf;
             const doc = new jsPDF();
-            const [year, month] = selMonth.split('-');
-            const monthName = new Date(year, month - 1).toLocaleString('default', { month: 'long', year: 'numeric' });
+            const [y, m] = selMonth.split('-');
+            const mName = new Date(y, m-1).toLocaleString('default', { month: 'long', year: 'numeric' });
 
-            // 1. Branding Header
             doc.setFont("helvetica", "bold");
             doc.setFontSize(22);
-            doc.setTextColor(0, 0, 0); // Solid Black
+            doc.setTextColor(0, 0, 0);
             doc.text("Brothers Corporation Ltd.", 105, 18, { align: "center" });
             
-            doc.setFillColor(235, 244, 255); // Light blue background for title bar
+            doc.setFillColor(235, 244, 255);
             doc.rect(15, 24, 180, 8, 'F');
             doc.setFontSize(14);
             doc.text("Conveyance Bill", 105, 30, { align: "center" });
@@ -322,92 +257,66 @@
             doc.setFontSize(11);
             doc.setFont("helvetica", "normal");
             doc.text(`Name : Khaled Jamil`, 15, 42);
-            doc.setFont("helvetica", "bold"); // Month in bold as per image
-            doc.text(`${monthName}`, 195, 42, { align: "right" });
+            doc.setFont("helvetica", "bold");
+            doc.text(`${mName}`, 195, 42, { align: "right" });
 
-            // 2. Prepare Data Rows for AutoTable
-            const tableData = filtered.map(item => ({
-                date: formatD(item.Date), // Formatted date for display
+            const tableRows = filtered.map(item => ({
+                date: formatD(item.Date),
                 from: item.Type === 'Meal' ? item.MealDesc : item.From,
                 to: item.Type === 'Meal' ? '' : item.To,
                 type: item.Type,
-                cost: item.Cost ? parseInt(item.Cost) : "", // Ensure cost is number or empty
+                cost: item.Cost ? parseInt(item.Cost) : "",
                 tripId: item.TripID,
-                rawDate: item.Date // Keep raw date for merging logic
+                rawDate: item.Date
             }));
 
             let grandTotal = filtered.reduce((acc, curr) => acc + (parseFloat(curr.Cost) || 0), 0);
 
-            // 3. Generate Table
             doc.autoTable({
                 startY: 48,
                 head: [['Date', 'From', 'To', 'Type', 'Cost']],
-                body: tableData.map(r => [r.date, r.from, r.to, r.type, r.cost]),
+                body: tableRows.map(r => [r.date, r.from, r.to, r.type, r.cost]),
                 theme: 'grid',
-                headStyles: { 
-                    fillColor: [255, 255, 255], 
-                    textColor: [0, 0, 0], 
-                    lineColor: [0, 0, 0], // Solid Black Border for Header
-                    lineWidth: 0.2, 
-                    fontStyle: 'bold' 
-                },
-                styles: { 
-                    fontSize: 10, 
-                    cellPadding: 3, 
-                    textColor: [0, 0, 0], // Solid Black Text
-                    lineColor: [0, 0, 0], // Solid Black Border for Body
-                    lineWidth: 0.2 
-                },
+                headStyles: { fillColor: [255, 255, 255], textColor: [0, 0, 0], lineColor: [0, 0, 0], lineWidth: 0.2, fontStyle: 'bold' },
+                styles: { fontSize: 10, cellPadding: 3, textColor: [0, 0, 0], lineColor: [0, 0, 0], lineWidth: 0.2, valign: 'middle' },
                 columnStyles: { 
-                    0: { cellWidth: 35 }, // Date column width
-                    4: { halign: 'center', fontStyle: 'bold', cellWidth: 25 } // Cost column styles
+                    0: { cellWidth: 35 },
+                    4: { halign: 'center', fontStyle: 'bold', cellWidth: 25 } 
                 },
                 didParseCell: function(data) {
                     const rowIndex = data.row.index;
                     const colIndex = data.column.index;
-                    const currentItem = tableData[rowIndex]; // The item corresponding to this row
+                    const current = tableRows[rowIndex];
 
-                    // --- DATE MERGING LOGIC (Column 0) ---
+                    // Date Merging Logic
                     if (colIndex === 0) {
-                        // Check if previous row has the same date
-                        if (rowIndex > 0 && currentItem.rawDate === tableData[rowIndex - 1].rawDate) {
-                            data.cell.text = []; // Hide text if date is same
+                        if (rowIndex > 0 && current.rawDate === tableRows[rowIndex - 1].rawDate) {
+                            data.cell.text = []; 
                         } else {
-                            // Calculate how many subsequent rows have the same date
                             let span = 1;
-                            for (let i = rowIndex + 1; i < tableData.length; i++) {
-                                if (tableData[i].rawDate === currentItem.rawDate) span++;
+                            for (let i = rowIndex + 1; i < tableRows.length; i++) {
+                                if (tableRows[i].rawDate === current.rawDate) span++;
                                 else break;
                             }
                             if (span > 1) data.cell.rowSpan = span;
                         }
                     }
 
-                    // --- COST MERGING LOGIC for Round Trips (Column 4) ---
-                    if (colIndex === 4 && currentItem.tripId) {
-                        // Find the first occurrence of this tripId
-                        const firstLegIndex = tableData.findIndex(item => item.tripId === currentItem.tripId);
-                        if (rowIndex === firstLegIndex) {
-                            // If this is the first leg, span the cost cell across 2 rows
+                    // Cost Merging (Round Trip)
+                    if (colIndex === 4 && current.tripId) {
+                        const firstIdx = tableRows.findIndex(r => r.tripId === current.tripId);
+                        if (rowIndex === firstIdx) {
                             data.cell.rowSpan = 2;
                         } else {
-                            // If this is the second leg, hide its cost
-                            data.cell.text = []; 
+                            data.cell.text = [];
                         }
                     }
                 },
-                foot: [['', '', '', 'Total', grandTotal]], // Grand total in the footer
-                footStyles: { 
-                    fillColor: [240, 240, 240], 
-                    textColor: [0, 0, 0], 
-                    lineColor: [0, 0, 0], 
-                    lineWidth: 0.2, 
-                    fontStyle: 'bold', 
-                    halign: 'center' 
-                }
+                foot: [['', '', '', 'Total', grandTotal]],
+                footStyles: { fillColor: [240, 240, 240], textColor: [0, 0, 0], lineColor: [0, 0, 0], lineWidth: 0.2, fontStyle: 'bold', halign: 'center' }
             });
 
-            doc.save(`Conveyance_Bill_${monthName.replace(' ', '_')}.pdf`);
+            doc.save(`Conveyance_${mName.replace(' ', '_')}.pdf`);
         }
     </script>
 </body>
