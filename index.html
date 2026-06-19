@@ -9,97 +9,99 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Public+Sans:wght@300;400;600;700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Public+Sans:wght@300;400;600;700;900&display=swap');
         body { font-family: 'Public Sans', sans-serif; -webkit-tap-highlight-color: transparent; }
-        .glass { background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(8px); }
-        .fab { position: fixed; bottom: 24px; right: 24px; z-index: 50; }
-        .loader { border-top-color: #2563eb; animation: spinner 0.8s linear infinite; }
+        .blue-gradient { background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%); }
+        .fab { position: fixed; bottom: 24px; right: 24px; z-index: 50; box-shadow: 0 10px 15px -3px rgba(37, 99, 235, 0.4); }
+        .loader { border-top-color: #ffffff; animation: spinner 0.8s linear infinite; }
         @keyframes spinner { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        select, input { border: 1px solid #e2e8f0 !important; }
     </style>
 </head>
-<body class="bg-[#f8fafc] text-slate-900 min-h-screen pb-24">
+<body class="bg-[#f1f5f9] text-slate-900 min-h-screen pb-24">
 
-    <!-- Header -->
-    <header class="glass sticky top-0 border-b border-slate-200 px-4 py-3 z-40">
+    <!-- Header Section -->
+    <div class="bg-white border-b border-slate-200 px-4 py-4 mb-4">
         <div class="max-w-md mx-auto flex justify-between items-center">
             <div>
-                <h1 class="text-lg font-bold text-slate-800">Conveyance App</h1>
-                <p id="headerMonth" class="text-[10px] text-blue-600 font-bold uppercase tracking-widest">June 2026</p>
+                <h1 class="text-xl font-black text-slate-800 tracking-tight">Conveyance App</h1>
+                <p id="headerMonth" class="text-[10px] text-blue-600 font-bold uppercase tracking-[0.2em]">Loading...</p>
             </div>
-            <button onclick="generatePDF()" class="bg-slate-900 text-white px-4 py-2 rounded-xl text-xs font-bold active:scale-95 transition-all">
-                <i class="fas fa-file-pdf mr-1"></i> EXPORT PDF
+            <button onclick="generatePDF()" class="bg-slate-900 text-white px-5 py-2.5 rounded-xl text-xs font-bold shadow-sm active:scale-95 transition-all">
+                <i class="fas fa-file-pdf mr-2"></i> EXPORT PDF
             </button>
         </div>
-    </header>
+    </div>
 
     <main class="p-4 max-w-md mx-auto">
         <!-- Month Filter -->
         <div class="mb-4">
-            <input type="month" id="monthFilter" onchange="renderList()" class="w-full p-3 rounded-xl bg-white shadow-sm font-semibold text-slate-600">
+            <input type="month" id="monthFilter" onchange="renderList()" class="w-full p-4 rounded-2xl bg-white border border-slate-200 shadow-sm font-bold text-slate-700 focus:ring-2 focus:ring-blue-500 outline-none">
         </div>
 
-        <!-- Summary Card -->
-        <div class="bg-white rounded-3xl p-6 shadow-sm border border-slate-100 mb-6 flex justify-between items-center">
-            <div>
-                <p class="text-slate-400 text-xs font-bold uppercase mb-1">Total Bill</p>
-                <h2 id="monthTotal" class="text-3xl font-black text-slate-900">৳ 0</h2>
+        <!-- Total Bill Blue Card -->
+        <div class="blue-gradient rounded-[2rem] p-7 shadow-xl mb-8 text-white relative overflow-hidden group">
+            <div class="relative z-10 flex justify-between items-center">
+                <div>
+                    <p class="text-blue-100 text-[11px] font-bold uppercase tracking-widest mb-1 opacity-80">Total Bill Summary</p>
+                    <h2 id="monthTotal" class="text-4xl font-black tracking-tight">৳ 0</h2>
+                </div>
+                <button onclick="loadData()" class="w-12 h-12 rounded-2xl bg-white/10 hover:bg-white/20 flex items-center justify-center transition-all">
+                    <i class="fas fa-sync-alt"></i>
+                </button>
             </div>
-            <div class="text-right">
-                <button onclick="loadData()" class="w-10 h-10 rounded-full bg-slate-50 text-slate-400 border border-slate-100"><i class="fas fa-sync-alt"></i></button>
-            </div>
+            <i class="fas fa-wallet absolute -bottom-6 -right-6 text-9xl text-white opacity-5 group-hover:scale-110 transition-transform"></i>
         </div>
 
         <!-- Monthly Expenses List -->
-        <h3 id="listHeading" class="font-bold text-slate-700 mb-4 px-1">...</h3>
-        <div id="expenseList" class="space-y-3"></div>
+        <div class="flex justify-between items-end mb-4 px-1">
+            <h3 id="listHeading" class="font-black text-slate-800 text-lg uppercase tracking-tight">Expenses</h3>
+        </div>
+        
+        <div id="expenseList" class="space-y-4"></div>
     </main>
 
     <!-- FAB -->
-    <button onclick="openModal()" class="fab bg-blue-600 text-white w-16 h-16 rounded-2xl flex items-center justify-center text-2xl shadow-xl active:scale-90 transition-all">
+    <button onclick="openModal()" class="fab bg-blue-600 text-white w-16 h-16 rounded-2xl flex items-center justify-center text-2xl active:scale-90 transition-all">
         <i class="fas fa-plus"></i>
     </button>
 
-    <!-- Modal -->
+    <!-- Modal Logic remains same for Add Entry -->
     <div id="modal" class="fixed inset-0 bg-slate-900/60 hidden flex items-end sm:items-center justify-center z-50 p-0 sm:p-4 backdrop-blur-sm">
-        <div class="bg-white rounded-t-[2rem] sm:rounded-[2rem] w-full max-w-sm p-6 shadow-2xl overflow-y-auto max-h-[90vh]">
+        <div class="bg-white rounded-t-[2.5rem] sm:rounded-3xl w-full max-w-sm p-7 shadow-2xl overflow-y-auto max-h-[90vh]">
             <div class="flex justify-between items-center mb-6">
-                <h2 class="text-xl font-bold">New Entry</h2>
-                <button onclick="closeModal()" class="text-slate-400 text-xl"><i class="fas fa-times"></i></button>
+                <h2 class="text-2xl font-black text-slate-800">New Entry</h2>
+                <button onclick="closeModal()" class="w-10 h-10 rounded-full bg-slate-100 text-slate-400"><i class="fas fa-times"></i></button>
             </div>
             
-            <form id="expenseForm" class="space-y-4">
+            <form id="expenseForm" class="space-y-5">
                 <div>
-                    <label class="text-[10px] font-bold text-slate-400 uppercase ml-1">Date</label>
-                    <input type="date" id="date" required class="w-full p-4 rounded-xl bg-slate-50 outline-none">
+                    <label class="text-[11px] font-bold text-slate-400 uppercase tracking-widest ml-1">Select Date</label>
+                    <input type="date" id="date" required class="w-full p-4 rounded-2xl bg-slate-50 border border-slate-100 outline-none focus:bg-white focus:ring-2 focus:ring-blue-100 transition-all">
                 </div>
 
                 <div>
-                    <label class="text-[10px] font-bold text-slate-400 uppercase ml-1">Expense Type</label>
-                    <select id="type" onchange="handleTypeChange()" class="w-full p-4 rounded-xl bg-slate-50 outline-none font-semibold">
+                    <label class="text-[11px] font-bold text-slate-400 uppercase tracking-widest ml-1">Type</label>
+                    <select id="type" onchange="handleTypeChange()" class="w-full p-4 rounded-2xl bg-slate-50 border border-slate-100 outline-none font-bold text-slate-700">
                         <option value="Bike">Bike</option>
                         <option value="Rickshaw">Rickshaw</option>
                         <option value="Meal">Meal</option>
-                        <option value="Others">Others</option>
                     </select>
                 </div>
 
-                <!-- Transport Fields -->
                 <div id="transportFields" class="grid grid-cols-2 gap-3">
                     <div>
-                        <label class="text-[10px] font-bold text-slate-400 uppercase ml-1">From</label>
-                        <input type="text" id="from" placeholder="Office" class="w-full p-4 rounded-xl bg-slate-50">
+                        <label class="text-[11px] font-bold text-slate-400 uppercase tracking-widest ml-1">From</label>
+                        <input type="text" id="from" placeholder="Office" class="w-full p-4 rounded-2xl bg-slate-50 border border-slate-100">
                     </div>
                     <div>
-                        <label class="text-[10px] font-bold text-slate-400 uppercase ml-1">To</label>
-                        <input type="text" id="to" placeholder="Site" class="w-full p-4 rounded-xl bg-slate-50">
+                        <label class="text-[11px] font-bold text-slate-400 uppercase tracking-widest ml-1">To</label>
+                        <input type="text" id="to" placeholder="Site" class="w-full p-4 rounded-2xl bg-slate-50 border border-slate-100">
                     </div>
                 </div>
 
-                <!-- Meal Field -->
                 <div id="mealField" class="hidden">
-                    <label class="text-[10px] font-bold text-slate-400 uppercase ml-1">Meal Category</label>
-                    <select id="mealDesc" class="w-full p-4 rounded-xl bg-slate-50 outline-none font-semibold">
+                    <label class="text-[11px] font-bold text-slate-400 uppercase tracking-widest ml-1">Meal Category</label>
+                    <select id="mealDesc" class="w-full p-4 rounded-2xl bg-slate-50 border border-slate-100 font-bold">
                         <option value="Breakfast">Breakfast</option>
                         <option value="Lunch">Lunch</option>
                         <option value="Dinner">Dinner</option>
@@ -107,18 +109,18 @@
                 </div>
 
                 <div>
-                    <label class="text-[10px] font-bold text-slate-400 uppercase ml-1">Cost (৳)</label>
-                    <input type="number" id="cost" required placeholder="0.00" class="w-full p-4 rounded-xl bg-slate-50 font-bold text-blue-600">
+                    <label class="text-[11px] font-bold text-slate-400 uppercase tracking-widest ml-1">Cost (৳)</label>
+                    <input type="number" id="cost" required placeholder="0.00" class="w-full p-4 rounded-2xl bg-slate-50 border border-slate-100 font-black text-blue-600 text-xl">
                 </div>
 
                 <div id="roundTripField">
-                    <label class="flex items-center gap-3 p-4 bg-slate-50 rounded-xl cursor-pointer">
-                        <input type="checkbox" id="isRoundTrip" class="w-5 h-5 rounded text-blue-600">
-                        <span class="text-slate-600 font-semibold text-sm">Round Trip (Auto-Return)</span>
+                    <label class="flex items-center gap-4 p-4 bg-slate-50 rounded-2xl cursor-pointer border border-slate-100">
+                        <input type="checkbox" id="isRoundTrip" class="w-6 h-6 rounded-lg text-blue-600 border-slate-300">
+                        <span class="text-slate-600 font-bold text-sm">Round Trip (Auto-Return)</span>
                     </label>
                 </div>
 
-                <button type="submit" id="saveBtn" class="w-full bg-blue-600 text-white p-5 rounded-2xl font-bold shadow-lg mt-2 active:scale-95 transition-all">Save Expense</button>
+                <button type="submit" id="saveBtn" class="w-full bg-blue-600 text-white p-5 rounded-2xl font-black shadow-lg shadow-blue-200 mt-2 active:scale-95 transition-all uppercase tracking-widest">Save Expense</button>
             </form>
         </div>
     </div>
@@ -141,49 +143,48 @@
             const rt = document.getElementById('roundTripField');
             
             if (type === 'Meal') {
-                trans.classList.add('hidden');
-                rt.classList.add('hidden');
-                meal.classList.remove('hidden');
-                document.getElementById('from').required = false;
-                document.getElementById('to').required = false;
+                trans.classList.add('hidden'); rt.classList.add('hidden'); meal.classList.remove('hidden');
+                document.getElementById('from').required = false; document.getElementById('to').required = false;
             } else {
-                trans.classList.remove('hidden');
-                rt.classList.remove('hidden');
-                meal.classList.add('hidden');
-                document.getElementById('from').required = true;
-                document.getElementById('to').required = true;
+                trans.classList.remove('hidden'); rt.classList.remove('hidden'); meal.classList.add('hidden');
+                document.getElementById('from').required = true; document.getElementById('to').required = true;
             }
         }
 
         async function loadData() {
             const list = document.getElementById('expenseList');
-            list.innerHTML = `<div class="flex justify-center py-10 opacity-30"><div class="loader rounded-full border-4 border-slate-200 h-8 w-8"></div></div>`;
+            list.innerHTML = `<div class="flex justify-center py-20"><div class="loader rounded-full border-4 border-slate-300 h-8 w-8"></div></div>`;
             try {
                 const res = await fetch(API_URL);
                 expenses = await res.json();
                 renderList();
-            } catch (e) { alert("Network Error"); }
+            } catch (e) { alert("Check Connection"); }
+        }
+
+        function formatFriendlyDate(dateStr) {
+            if(!dateStr) return "N/A";
+            const date = new Date(dateStr);
+            return date.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
         }
 
         function renderList() {
             const selMonth = document.getElementById('monthFilter').value;
             const list = document.getElementById('expenseList');
-            const totalDisplay = document.getElementById('monthTotal');
-            
             const [y, m] = selMonth.split('-');
             const monthLabel = new Date(y, m-1).toLocaleString('default', { month: 'long', year: 'numeric' });
+            
             document.getElementById('headerMonth').innerText = monthLabel;
-            document.getElementById('listHeading').innerText = `${monthLabel} Expenses`;
+            document.getElementById('listHeading').innerText = `${monthLabel} Transactions`;
 
             const filtered = expenses.filter(item => item.Date.startsWith(selMonth))
                              .sort((a, b) => new Date(b.Date) - new Date(a.Date));
             
             let total = 0;
             let html = "";
-            let processedIds = new Set();
+            let processedTripIds = new Set();
 
             filtered.forEach(item => {
-                if (processedIds.has(item.RowID)) return;
+                if (item.TripID && processedTripIds.has(item.TripID)) return;
                 
                 const costVal = parseFloat(item.Cost || 0);
                 total += costVal;
@@ -193,56 +194,68 @@
 
                 if (item.Type === "Meal") {
                     cardContent = `
-                        <div class="w-10 h-10 rounded-xl bg-orange-100 text-orange-600 flex items-center justify-center text-lg"><i class="fas fa-utensils"></i></div>
+                        <div class="w-12 h-12 rounded-2xl bg-orange-100 text-orange-600 flex items-center justify-center text-xl"><i class="fas fa-utensils"></i></div>
                         <div class="flex-1 ml-4">
-                            <p class="text-[10px] text-slate-400 font-bold uppercase tracking-tight">${item.Date}</p>
-                            <p class="font-bold text-slate-800">${item.MealDesc || 'Meal'}</p>
+                            <p class="text-[10px] text-slate-400 font-black uppercase tracking-widest mb-0.5">${formatFriendlyDate(item.Date)}</p>
+                            <p class="font-black text-slate-800 text-lg">${item.MealDesc || 'Meal'}</p>
                         </div>`;
                 } else if (isRT) {
-                    // Find pair
-                    const pair = filtered.find(p => p.TripID === item.TripID && p.RowID !== item.RowID);
-                    if (pair) processedIds.add(pair.RowID);
+                    processedTripIds.add(item.TripID);
                     cardContent = `
-                        <div class="w-10 h-10 rounded-xl bg-blue-100 text-blue-600 flex items-center justify-center text-lg"><i class="fas fa-motorcycle"></i></div>
+                        <div class="w-12 h-12 rounded-2xl bg-blue-100 text-blue-600 flex items-center justify-center text-xl"><i class="fas fa-route"></i></div>
                         <div class="flex-1 ml-4">
-                            <p class="text-[10px] text-slate-400 font-bold uppercase tracking-tight">${item.Date}</p>
-                            <p class="font-bold text-slate-800 leading-tight">${item.From} <span class="text-blue-500">↔</span> ${item.To}</p>
-                            <p class="text-[9px] text-slate-400 font-bold mt-0.5">ROUND TRIP • ${item.Type}</p>
+                            <p class="text-[10px] text-slate-400 font-black uppercase tracking-widest mb-0.5">${formatFriendlyDate(item.Date)}</p>
+                            <p class="font-bold text-slate-800 text-sm leading-snug">${item.From} → ${item.To} / ${item.To} → ${item.From}</p>
+                            <p class="text-[9px] text-blue-600 font-black mt-1 uppercase tracking-widest">ROUND TRIP • ${item.Type}</p>
                         </div>`;
                 } else {
                     cardContent = `
-                        <div class="w-10 h-10 rounded-xl bg-slate-100 text-slate-600 flex items-center justify-center text-lg"><i class="fas fa-arrow-right"></i></div>
+                        <div class="w-12 h-12 rounded-2xl bg-slate-100 text-slate-500 flex items-center justify-center text-xl"><i class="fas fa-location-arrow"></i></div>
                         <div class="flex-1 ml-4">
-                            <p class="text-[10px] text-slate-400 font-bold uppercase tracking-tight">${item.Date}</p>
-                            <p class="font-bold text-slate-800 leading-tight">${item.From} → ${item.To}</p>
-                            <p class="text-[9px] text-slate-400 font-bold mt-0.5">${item.Type}</p>
+                            <p class="text-[10px] text-slate-400 font-black uppercase tracking-widest mb-0.5">${formatFriendlyDate(item.Date)}</p>
+                            <p class="font-black text-slate-800 text-lg">${item.From} → ${item.To}</p>
+                            <p class="text-[9px] text-slate-500 font-bold mt-0.5 uppercase tracking-widest">${item.Type}</p>
                         </div>`;
                 }
 
                 html += `
-                    <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 flex items-center">
+                    <div class="bg-white p-5 rounded-[1.75rem] shadow-sm border border-slate-200 flex items-center">
                         ${cardContent}
-                        <div class="text-right ml-2 flex items-center gap-4">
-                            <span class="font-black text-slate-900 text-lg">৳${costVal || '-'}</span>
-                            <button onclick="deleteEntry('${item.RowID}')" class="text-red-200 hover:text-red-500"><i class="fas fa-trash-alt"></i></button>
+                        <div class="text-right ml-2 flex items-center gap-5">
+                            <span class="font-black text-slate-900 text-xl tracking-tighter">৳${costVal || '-'}</span>
+                            <button onclick="deleteEntry('${item.RowID}', '${item.TripID || ''}')" class="w-10 h-10 flex items-center justify-center rounded-xl bg-red-50 text-red-300 hover:text-red-500 active:scale-90 transition-all">
+                                <i class="fas fa-trash-alt"></i>
+                            </button>
                         </div>
                     </div>`;
             });
 
-            list.innerHTML = html || `<div class="text-center py-10 text-slate-300 font-bold">No Records</div>`;
-            totalDisplay.innerText = `৳ ${total}`;
+            list.innerHTML = html || `<div class="text-center py-20 text-slate-300 font-bold uppercase tracking-widest text-xs">Empty Log</div>`;
+            document.getElementById('monthTotal').innerText = `৳ ${total}`;
         }
 
-        async function deleteEntry(rowId) {
-            if(!confirm("Delete record?")) return;
-            await fetch(API_URL, { method: 'POST', body: JSON.stringify({ action: 'DELETE', rowId: rowId }) });
-            loadData();
+        async function deleteEntry(rowId, tripId) {
+            if(!confirm("Are you sure? This cannot be undone.")) return;
+            
+            // Show loading state on button
+            event.currentTarget.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+            
+            try {
+                await fetch(API_URL, { 
+                    method: 'POST', 
+                    body: JSON.stringify({ action: 'DELETE', rowId: rowId, tripId: tripId }) 
+                });
+                loadData();
+            } catch (e) {
+                alert("Delete failed. Check internet.");
+                loadData();
+            }
         }
 
         document.getElementById('expenseForm').onsubmit = async (e) => {
             e.preventDefault();
             const btn = document.getElementById('saveBtn');
-            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+            btn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> Saving...';
             btn.disabled = true;
 
             const data = {
@@ -257,7 +270,7 @@
 
             await fetch(API_URL, { method: 'POST', body: JSON.stringify(data) });
             closeModal();
-            btn.innerText = "Save Expense";
+            btn.innerHTML = 'Save Expense';
             btn.disabled = false;
             document.getElementById('expenseForm').reset();
             loadData();
@@ -266,22 +279,20 @@
         function openModal() { document.getElementById('modal').classList.remove('hidden'); handleTypeChange(); }
         function closeModal() { document.getElementById('modal').classList.add('hidden'); }
 
-        // PDF Generation with MERGING logic
         function generatePDF() {
             const selMonth = document.getElementById('monthFilter').value;
             const filtered = expenses.filter(item => item.Date.startsWith(selMonth))
                              .sort((a, b) => new Date(a.Date) - new Date(b.Date));
-            
-            if(!filtered.length) return alert("No data");
+            if(!filtered.length) return alert("No records to export.");
 
             const { jsPDF } = window.jspdf;
             const doc = new jsPDF();
             const [y, m] = selMonth.split('-');
             const monthName = new Date(y, m-1).toLocaleString('default', { month: 'long', year: 'numeric' });
 
-            // Branding
             doc.setFont("helvetica", "bold");
             doc.setFontSize(22);
+            doc.setTextColor(0,0,0); // Solid Black
             doc.text("Brothers Corporation Ltd.", 105, 18, { align: "center" });
             
             doc.setFillColor(235, 244, 255);
@@ -295,57 +306,43 @@
             doc.setFont("helvetica", "bold");
             doc.text(`${monthName}`, 195, 42, { align: "right" });
 
-            const rows = [];
-            let grandTotal = 0;
+            const rows = filtered.map(item => [
+                formatFriendlyDate(item.Date), 
+                item.Type === 'Meal' ? item.MealDesc : item.From, 
+                item.Type === 'Meal' ? '' : item.To, 
+                item.Type, 
+                item.Cost ? parseInt(item.Cost) : ""
+            ]);
 
-            filtered.forEach(item => {
-                const dateFmt = new Date(item.Date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
-                rows.push({
-                    date: dateFmt,
-                    from: item.Type === 'Meal' ? item.MealDesc : item.From,
-                    to: item.Type === 'Meal' ? '' : item.To,
-                    type: item.Type,
-                    cost: item.Cost ? parseInt(item.Cost) : "",
-                    tripId: item.TripID,
-                    rawDate: item.Date
-                });
-                if(item.Cost) grandTotal += parseFloat(item.Cost);
-            });
+            let grandTotal = filtered.reduce((acc, curr) => acc + (parseFloat(curr.Cost) || 0), 0);
 
             doc.autoTable({
                 startY: 48,
                 head: [['Date', 'From', 'To', 'Type', 'Cost']],
-                body: rows.map(r => [r.date, r.from, r.to, r.type, r.cost]),
+                body: rows,
                 theme: 'grid',
                 headStyles: { fillColor: [255, 255, 255], textColor: [0, 0, 0], lineWidth: 0.1, fontStyle: 'bold' },
-                styles: { fontSize: 9, cellPadding: 3, textColor: [0, 0, 0] }, // SOLID BLACK TEXT
+                styles: { fontSize: 9, cellPadding: 3, textColor: [0, 0, 0] },
                 columnStyles: { 4: { halign: 'center', fontStyle: 'bold' } },
                 didParseCell: function(data) {
                     const rowIndex = data.row.index;
                     const colIndex = data.column.index;
-                    const current = rows[rowIndex];
+                    const current = filtered[rowIndex];
 
-                    // Date Merging
-                    if (colIndex === 0) {
-                        if (rowIndex > 0 && current.rawDate === rows[rowIndex-1].rawDate) {
-                            data.cell.styles.fontSize = 0.1; // Hide text
-                            data.cell.styles.textColor = [255,255,255];
-                        }
+                    if (colIndex === 0 && rowIndex > 0 && current.Date === filtered[rowIndex-1].Date) {
+                        data.cell.styles.fontSize = 0.1;
+                        data.cell.styles.textColor = [255,255,255];
                     }
-
-                    // Cost Merging for Round Trips
-                    if (colIndex === 4 && current.tripId) {
-                        const pairIndex = rows.findIndex((r, idx) => r.tripId === current.tripId && idx !== rowIndex);
-                        if (pairIndex > rowIndex) {
-                            data.cell.rowSpan = 2;
-                        }
+                    if (colIndex === 4 && current.TripID) {
+                        const pairIndex = filtered.findIndex((r, idx) => r.TripID === current.TripID && idx !== rowIndex);
+                        if (pairIndex > rowIndex) data.cell.rowSpan = 2;
                     }
                 },
                 foot: [['', '', 'Total', '', grandTotal]],
                 footStyles: { fillColor: [240, 240, 240], textColor: [0, 0, 0], fontStyle: 'bold', halign: 'center' }
             });
 
-            doc.save(`Conveyance_${selMonth}.pdf`);
+            doc.save(`Conveyance_${monthName.replace(' ', '_')}.pdf`);
         }
     </script>
 </body>
