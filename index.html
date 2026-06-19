@@ -280,70 +280,117 @@
         function closeModal() { document.getElementById('modal').classList.add('hidden'); }
 
         function generatePDF() {
-            const selMonth = document.getElementById('monthFilter').value;
-            const filtered = expenses.filter(item => item.Date.startsWith(selMonth))
-                             .sort((a, b) => new Date(a.Date) - new Date(b.Date));
-            if(!filtered.length) return alert("No records to export.");
+    const selMonth = document.getElementById('monthFilter').value;
+    // Sort ascending for the official report
+    const filtered = expenses.filter(item => item.Date.startsWith(selMonth))
+                     .sort((a, b) => new Date(a.Date) - new Date(b.Date));
+    
+    if (!filtered.length) return alert("No data to export");
 
-            const { jsPDF } = window.jspdf;
-            const doc = new jsPDF();
-            const [y, m] = selMonth.split('-');
-            const monthName = new Date(y, m-1).toLocaleString('default', { month: 'long', year: 'numeric' });
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+    const [y, m] = selMonth.split('-');
+    const mName = new Date(y, m - 1).toLocaleString('default', { month: 'long', year: 'numeric' });
 
-            doc.setFont("helvetica", "bold");
-            doc.setFontSize(22);
-            doc.setTextColor(0,0,0); // Solid Black
-            doc.text("Brothers Corporation Ltd.", 105, 18, { align: "center" });
-            
-            doc.setFillColor(235, 244, 255);
-            doc.rect(15, 24, 180, 8, 'F');
-            doc.setFontSize(14);
-            doc.text("Conveyance Bill", 105, 30, { align: "center" });
+    // 1. Branding Header
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(22);
+    doc.setTextColor(0, 0, 0); 
+    doc.text("Brothers Corporation Ltd.", 105, 18, { align: "center" });
+    
+    doc.setFillColor(235, 244, 255);
+    doc.rect(15, 24, 180, 8, 'F');
+    doc.setFontSize(14);
+    doc.text("Conveyance Bill", 105, 30, { align: "center" });
 
-            doc.setFontSize(11);
-            doc.setFont("helvetica", "normal");
-            doc.text(`Name : Khaled Jamil`, 15, 42);
-            doc.setFont("helvetica", "bold");
-            doc.text(`${monthName}`, 195, 42, { align: "right" });
+    doc.setFontSize(11);
+    doc.setFont("helvetica", "normal");
+    doc.text(`Name : Khaled Jamil`, 15, 42);
+    doc.setFont("helvetica", "bold");
+    doc.text(`${mName}`, 195, 42, { align: "right" });
 
-            const rows = filtered.map(item => [
-                formatFriendlyDate(item.Date), 
-                item.Type === 'Meal' ? item.MealDesc : item.From, 
-                item.Type === 'Meal' ? '' : item.To, 
-                item.Type, 
-                item.Cost ? parseInt(item.Cost) : ""
-            ]);
+    // 2. Prepare Data Rows
+    const tableData = filtered.map(item => ({
+        date: formatD(item.Date),
+        from: item.Type === 'Meal' ? item.MealDesc : item.From,
+        to: item.Type === 'Meal' ? '' : item.To,
+        type: item.Type,
+        cost: item.Cost ? parseInt(item.Cost) : "",
+        tripId: item.TripID,
+        rawDate: item.Date
+    }));
 
-            let grandTotal = filtered.reduce((acc, curr) => acc + (parseFloat(curr.Cost) || 0), 0);
+    let grandTotal = filtered.reduce((acc, curr) => acc + (parseFloat(curr.Cost) || 0), 0);
 
-            doc.autoTable({
-                startY: 48,
-                head: [['Date', 'From', 'To', 'Type', 'Cost']],
-                body: rows,
-                theme: 'grid',
-                headStyles: { fillColor: [255, 255, 255], textColor: [0, 0, 0], lineWidth: 0.1, fontStyle: 'bold' },
-                styles: { fontSize: 9, cellPadding: 3, textColor: [0, 0, 0] },
-                columnStyles: { 4: { halign: 'center', fontStyle: 'bold' } },
-                didParseCell: function(data) {
-                    const rowIndex = data.row.index;
-                    const colIndex = data.column.index;
-                    const current = filtered[rowIndex];
+    // 3. Generate Table
+    doc.autoTable({
+        startY: 48,
+        head: [['Date', 'From', 'To', 'Type', 'Cost']],
+        body: tableData.map(r => [r.date, r.from, r.to, r.type, r.cost]),
+        theme: 'grid',
+        headStyles: { 
+            fillColor: [255, 255, 255], 
+            textColor: [0, 0, 0], 
+            lineColor: [0, 0, 0], 
+            lineWidth: 0.2, 
+            fontStyle: 'bold' 
+        },
+        styles: { 
+            fontSize: 10, 
+            cellPadding: 3, 
+            textColor: [0, 0, 0], 
+            lineColor: [0, 0, 0], // SOLID BLACK BORDER
+            lineWidth: 0.2 
+        },
+        columnStyles: { 
+            0: { cellWidth: 35 },
+            4: { halign: 'center', fontStyle: 'bold', cellWidth: 25 } 
+        },
+        didParseCell: function(data) {
+            const rowIndex = data.row.index;
+            const colIndex = data.column.index;
+            const current = tableData[rowIndex];
 
-                    if (colIndex === 0 && rowIndex > 0 && current.Date === filtered[rowIndex-1].Date) {
-                        data.cell.styles.fontSize = 0.1;
-                        data.cell.styles.textColor = [255,255,255];
+            // --- DATE MERGING LOGIC ---
+            if (colIndex === 0) {
+                // If this isn't the first row and date is same as previous, hide it
+                if (rowIndex > 0 && current.rawDate === tableData[rowIndex - 1].rawDate) {
+                    data.cell.text = []; // Clear text
+                } else {
+                    // Calculate how many subsequent rows have the same date
+                    let span = 1;
+                    for (let i = rowIndex + 1; i < tableData.length; i++) {
+                        if (tableData[i].rawDate === current.rawDate) span++;
+                        else break;
                     }
-                    if (colIndex === 4 && current.TripID) {
-                        const pairIndex = filtered.findIndex((r, idx) => r.TripID === current.TripID && idx !== rowIndex);
-                        if (pairIndex > rowIndex) data.cell.rowSpan = 2;
-                    }
-                },
-                foot: [['', '', 'Total', '', grandTotal]],
-                footStyles: { fillColor: [240, 240, 240], textColor: [0, 0, 0], fontStyle: 'bold', halign: 'center' }
-            });
+                    if (span > 1) data.cell.rowSpan = span;
+                }
+            }
 
-            doc.save(`Conveyance_${monthName.replace(' ', '_')}.pdf`);
+            // --- COST MERGING LOGIC (ROUND TRIP) ---
+            if (colIndex === 4) {
+                if (current.tripId) {
+                    // Find if this is the first leg of a trip
+                    const firstLegIndex = tableData.findIndex(r => r.tripId === current.tripId);
+                    if (rowIndex === firstLegIndex) {
+                        data.cell.rowSpan = 2; // Merge Cost across 2 rows
+                    }
+                }
+            }
+        },
+        foot: [['', '', '', 'Total', grandTotal]],
+        footStyles: { 
+            fillColor: [240, 240, 240], 
+            textColor: [0, 0, 0], 
+            lineColor: [0, 0, 0], 
+            lineWidth: 0.2, 
+            fontStyle: 'bold', 
+            halign: 'center' 
         }
+    });
+
+    doc.save(`Conveyance_Bill_${mName.replace(' ', '_')}.pdf`);
+}
     </script>
 </body>
 </html>
