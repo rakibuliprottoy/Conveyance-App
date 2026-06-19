@@ -39,15 +39,15 @@
             </div>
         </div>
 
-        <h3 id="listHeading" class="font-black text-slate-800 text-lg uppercase mb-4">LOG</h3>
+        <h3 id="listHeading" class="font-black text-slate-800 text-lg uppercase mb-4 tracking-tight">Expenses Log</h3>
         <div id="expenseList" class="space-y-4"></div>
     </main>
 
-    <button onclick="openModal()" class="fixed bottom-6 right-6 bg-blue-600 text-white w-16 h-16 rounded-[1.5rem] shadow-2xl flex items-center justify-center text-2xl z-40"><i class="fas fa-plus"></i></button>
+    <button onclick="openModal()" class="fixed bottom-6 right-6 bg-blue-600 text-white w-16 h-16 rounded-[1.5rem] shadow-2xl flex items-center justify-center text-2xl z-40 active:scale-90 transition-transform"><i class="fas fa-plus"></i></button>
 
-    <!-- Modal Form -->
+    <!-- Entry Modal -->
     <div id="modal" class="fixed inset-0 bg-slate-900/60 hidden flex items-end sm:items-center justify-center z-[60] p-0 sm:p-4 backdrop-blur-sm">
-        <div class="bg-white rounded-t-[3rem] sm:rounded-3xl w-full max-w-sm p-8 shadow-2xl">
+        <div class="bg-white rounded-t-[3rem] sm:rounded-3xl w-full max-w-sm p-8 shadow-2xl overflow-y-auto max-h-[90vh]">
             <div class="flex justify-between items-center mb-8">
                 <h2 class="text-2xl font-black text-slate-800">New Entry</h2>
                 <button onclick="closeModal()" class="text-slate-400"><i class="fas fa-times"></i></button>
@@ -97,7 +97,7 @@
 
         async function loadData() {
             const list = document.getElementById('expenseList');
-            list.innerHTML = `<div class="text-center py-20 font-bold text-slate-400 italic">Syncing...</div>`;
+            list.innerHTML = `<div class="text-center py-20 font-bold text-slate-400 italic">Refreshing Data...</div>`;
             try {
                 const res = await fetch(`${API_URL}?t=${Date.now()}`);
                 expenses = await res.json();
@@ -105,10 +105,12 @@
             } catch (e) { alert("Error loading data"); }
         }
 
+        // Fixed Date Parser: Uses String split to prevent timezone shift
         function formatD(dateStr) {
             if(!dateStr) return "";
             const [y, m, d] = dateStr.split('-');
-            return new Date(y, m-1, d).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+            const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+            return `${d} ${months[parseInt(m)-1]} ${y}`;
         }
 
         function renderList() {
@@ -130,15 +132,11 @@
                 total += cost;
 
                 let content = "";
-                let delRow = item.RowID;
-                let delTrip = "";
-
                 if (item.Type === "Meal") {
                     content = `<p class="font-black text-slate-800 text-lg">${item.MealDesc || 'Meal'}</p>`;
                 } else if (item.isRoundTrip === "YES" && item.TripID) {
                     processedTripIds.add(item.TripID);
-                    content = `<p class="font-bold text-slate-800 text-sm">${item.From} ↔ ${item.To}</p><p class="text-[10px] text-blue-600 font-black uppercase">ROUND TRIP</p>`;
-                    delTrip = item.TripID;
+                    content = `<p class="font-bold text-slate-800 text-sm leading-tight">${item.From} <span class="text-blue-500">↔</span> ${item.To}</p><p class="text-[10px] text-blue-600 font-black mt-1 uppercase">ROUND TRIP • ${item.Type}</p>`;
                 } else {
                     content = `<p class="font-black text-slate-800 text-lg">${item.From} → ${item.To}</p><p class="text-[10px] text-slate-400 font-bold uppercase">${item.Type}</p>`;
                 }
@@ -150,20 +148,22 @@
                     </div>
                     <div class="text-right flex items-center gap-4">
                         <span class="font-black text-slate-900 text-xl tracking-tight">৳${cost}</span>
-                        <button onclick="deleteEntry('${delRow}', '${delTrip}')" class="w-10 h-10 rounded-xl bg-red-50 text-red-200 hover:text-red-500 flex items-center justify-center"><i class="fas fa-trash-alt"></i></button>
+                        <button onclick="deleteEntry('${item.RowID}', '${item.TripID || ''}')" class="w-10 h-10 rounded-xl bg-red-50 text-red-200 hover:text-red-500 flex items-center justify-center transition-transform active:scale-90"><i class="fas fa-trash-alt"></i></button>
                     </div>
                 </div>`;
             });
-            list.innerHTML = html || `<p class="text-center py-20 text-slate-300 font-bold">Empty</p>`;
+            list.innerHTML = html || `<p class="text-center py-20 text-slate-300 font-bold">No Data for this month</p>`;
             document.getElementById('monthTotal').innerText = `৳ ${total}`;
         }
 
         async function deleteEntry(rowId, tripId) {
-            if(!confirm("Delete?")) return;
+            if(!confirm("Delete this entry?")) return;
+            const btn = event.currentTarget;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
             try {
                 const res = await fetch(API_URL, { method: 'POST', body: JSON.stringify({ action: 'DELETE', rowId, tripId }) });
                 if(await res.text() === "Deleted") loadData();
-            } catch (e) { alert("Network error"); }
+            } catch (e) { alert("Delete failed"); loadData(); }
         }
 
         document.getElementById('expenseForm').onsubmit = async (e) => {
@@ -180,8 +180,9 @@
 
         function generatePDF() {
             const selMonth = document.getElementById('monthFilter').value;
+            // Sorting ascending for the official PDF report
             const filtered = expenses.filter(item => item.Date.startsWith(selMonth)).sort((a,b) => new Date(a.Date) - new Date(b.Date));
-            if(!filtered.length) return alert("No data");
+            if(!filtered.length) return alert("No data to export");
 
             const { jsPDF } = window.jspdf; const doc = new jsPDF();
             const [y, m] = selMonth.split('-'); const mName = new Date(y, m-1).toLocaleString('default', { month: 'long', year: 'numeric' });
@@ -199,16 +200,16 @@
                 head: [['Date', 'From', 'To', 'Type', 'Cost']],
                 body: body,
                 theme: 'grid',
-                headStyles: { fillColor: [255, 255, 255], textColor: [0, 0, 0], lineColor: [0, 0, 0], lineWidth: 0.2 },
+                headStyles: { fillColor: [255, 255, 255], textColor: [0, 0, 0], lineColor: [0, 0, 0], lineWidth: 0.2, fontStyle: 'bold' },
                 styles: { fontSize: 10, textColor: [0, 0, 0], lineColor: [0, 0, 0], lineWidth: 0.2, valign: 'middle' },
-                columnStyles: { 0: { cellWidth: 35 }, 4: { halign: 'center', fontStyle: 'bold' } },
+                columnStyles: { 0: { cellWidth: 35 }, 4: { halign: 'center', fontStyle: 'bold', cellWidth: 25 } },
                 didParseCell: function(data) {
                     if (data.row.section !== 'body') return;
                     const rowIndex = data.row.index;
                     const colIndex = data.column.index;
                     const item = filtered[rowIndex];
 
-                    // Date Merge Boundary Check
+                    // --- DATE MERGING ---
                     if (colIndex === 0) {
                         if (rowIndex > 0 && item.Date === filtered[rowIndex-1].Date) {
                             data.cell.text = ""; 
@@ -217,20 +218,28 @@
                             for (let i = rowIndex + 1; i < filtered.length; i++) {
                                 if (filtered[i].Date === item.Date) span++; else break;
                             }
-                            if (span > 1) data.cell.rowSpan = span;
+                            if (span > 1) {
+                                data.cell.rowSpan = span;
+                                data.cell.text = formatD(item.Date);
+                            }
                         }
                     }
 
-                    // Cost Merge
+                    // --- COST MERGING (ROUND TRIP) ---
                     if (colIndex === 4 && item.TripID) {
                         const firstIdx = filtered.findIndex(r => r.TripID === item.TripID);
-                        if (rowIndex === firstIdx) data.cell.rowSpan = 2; else data.cell.text = "";
+                        if (rowIndex === firstIdx) {
+                            data.cell.rowSpan = 2;
+                            data.cell.text = String(item.Cost);
+                        } else {
+                            data.cell.text = "";
+                        }
                     }
                 },
                 foot: [['', '', '', 'Total', total]],
                 footStyles: { fillColor: [240, 240, 240], textColor: [0, 0, 0], lineColor: [0, 0, 0], lineWidth: 0.2, fontStyle: 'bold', halign: 'center' }
             });
-            doc.save(`Conveyance_${mName}.pdf`);
+            doc.save(`Conveyance_Bill_${mName.replace(' ', '_')}.pdf`);
         }
     </script>
 </body>
