@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Conveyance App</title>
+    <!-- Tailwind for Modern UI -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- PDF Libraries -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
+    <!-- Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; -webkit-tap-highlight-color: transparent; }
+        .glass { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); }
+        .fab { position: fixed; bottom: 24px; right: 24px; z-index: 50; box-shadow: 0 10px 25px -5px rgba(37, 99, 235, 0.4); }
+        .loader { border-top-color: #2563eb; animation: spinner 0.8s linear infinite; }
+        @keyframes spinner { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-900 min-h-screen pb-24">
+
+    <!-- Header -->
+    <header class="glass sticky top-0 border-b border-slate-200 px-4 py-4 z-40">
+        <div class="max-w-md mx-auto flex justify-between items-center">
+            <div>
+                <h1 class="text-xl font-bold text-blue-600">Conveyance App</h1>
+                <p class="text-[10px] text-slate-400 font-semibold tracking-widest uppercase">Khaled Jamil • Expense Tracker</p>
+            </div>
+            <button onclick="generatePDF()" class="bg-blue-600 text-white px-4 py-2 rounded-xl text-sm font-bold active:scale-95 transition-transform flex items-center gap-2">
+                <i class="fas fa-file-export"></i> PDF
+            </button>
+        </div>
+    </header>
+
+    <main class="p-4 max-w-md mx-auto">
+        <!-- Month Selector -->
+        <div class="mb-6">
+            <label class="text-[11px] font-bold text-slate-400 uppercase ml-1">View Records For</label>
+            <input type="month" id="monthFilter" onchange="renderList()" class="w-full mt-1 p-4 rounded-2xl bg-white border border-slate-200 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium">
+        </div>
+
+        <!-- Dashboard Card -->
+        <div class="bg-blue-600 rounded-[2rem] p-6 shadow-xl mb-8 text-white relative overflow-hidden">
+            <div class="relative z-10">
+                <p class="opacity-80 text-sm font-medium">Monthly Total Spent</p>
+                <h2 id="monthTotal" class="text-4xl font-black mt-1">৳ 0</h2>
+                <div class="flex items-center gap-2 mt-4 opacity-70 text-xs">
+                    <i class="fas fa-calendar-alt"></i>
+                    <span id="selectedMonthText">...</span>
+                </div>
+            </div>
+            <i class="fas fa-wallet absolute -bottom-4 -right-4 text-9xl opacity-10"></i>
+        </div>
+
+        <!-- List Section -->
+        <div class="flex justify-between items-center mb-4 px-1">
+            <h3 class="font-bold text-slate-700">Recent Transactions</h3>
+            <button onclick="loadData()" class="text-blue-600 p-2"><i class="fas fa-redo-alt text-sm"></i></button>
+        </div>
+        
+        <div id="expenseList" class="space-y-3">
+            <!-- Loader will show here -->
+        </div>
+    </main>
+
+    <!-- FAB -->
+    <button onclick="openModal()" class="fab bg-blue-600 text-white w-16 h-16 rounded-2xl flex items-center justify-center text-2xl transition-all active:scale-90">
+        <i class="fas fa-plus"></i>
+    </button>
+
+    <!-- Entry Modal -->
+    <div id="modal" class="fixed inset-0 bg-slate-900/60 hidden flex items-end sm:items-center justify-center z-50 p-0 sm:p-4 backdrop-blur-sm">
+        <div class="bg-white rounded-t-[2.5rem] sm:rounded-[2rem] w-full max-w-sm p-8 shadow-2xl animate-slide-up">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-2xl font-bold text-slate-800">New Entry</h2>
+                <button onclick="closeModal()" class="w-10 h-10 flex items-center justify-center rounded-full bg-slate-100 text-slate-500"><i class="fas fa-times"></i></button>
+            </div>
+            
+            <form id="expenseForm" class="space-y-4">
+                <div class="space-y-1">
+                    <label class="text-xs font-bold text-slate-400 uppercase px-1">Date</label>
+                    <input type="date" id="date" required class="w-full bg-slate-50 border-none p-4 rounded-2xl focus:ring-2 focus:ring-blue-500">
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div class="space-y-1">
+                        <label class="text-xs font-bold text-slate-400 uppercase px-1">From</label>
+                        <input type="text" id="from" placeholder="Office" required class="w-full bg-slate-50 border-none p-4 rounded-2xl">
+                    </div>
+                    <div class="space-y-1">
+                        <label class="text-xs font-bold text-slate-400 uppercase px-1">To</label>
+                        <input type="text" id="to" placeholder="Site" required class="w-full bg-slate-50 border-none p-4 rounded-2xl">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div class="space-y-1">
+                        <label class="text-xs font-bold text-slate-400 uppercase px-1">Type</label>
+                        <select id="type" class="w-full bg-slate-50 border-none p-4 rounded-2xl appearance-none">
+                            <option value="Bike">Bike</option>
+                            <option value="Rickshaw">Rickshaw</option>
+                            <option value="Meal">Meal</option>
+                        </select>
+                    </div>
+                    <div class="space-y-1">
+                        <label class="text-xs font-bold text-slate-400 uppercase px-1">Cost (৳)</label>
+                        <input type="number" id="cost" placeholder="0.00" required class="w-full bg-slate-50 border-none p-4 rounded-2xl">
+                    </div>
+                </div>
+
+                <label class="flex items-center gap-3 p-4 bg-slate-50 rounded-2xl cursor-pointer transition-colors hover:bg-slate-100">
+                    <input type="checkbox" id="isRoundTrip" class="w-5 h-5 rounded text-blue-600 border-none bg-white">
+                    <span class="text-slate-600 font-semibold text-sm">Round Trip (Auto-Return)</span>
+                </label>
+
+                <button type="submit" id="saveBtn" class="w-full bg-blue-600 text-white p-5 rounded-2xl font-bold shadow-lg mt-4 active:scale-95 transition-all">Save Expense</button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = 'https://script.google.com/macros/s/AKfycbySHmNzBC5qppUXJH-ByszRg8NhHu7jFdxQZb7F0UZeimCiabPWVy6vgdshrRIF6sz3Jw/exec';
+        let expenses = [];
+
+        // Initialize
+        window.onload = () => {
+            const now = new Date();
+            document.getElementById('monthFilter').value = now.toISOString().substring(0, 7);
+            document.getElementById('date').valueAsDate = now;
+            loadData();
+        };
+
+        async function loadData() {
+            const list = document.getElementById('expenseList');
+            list.innerHTML = `
+                <div class="flex flex-col items-center justify-center py-20 opacity-40">
+                    <div class="loader rounded-full border-4 border-slate-200 h-10 w-10 mb-4"></div>
+                    <p class="text-xs font-bold uppercase tracking-widest">Fetching Database...</p>
+                </div>`;
+            
+            try {
+                const res = await fetch(API_URL);
+                expenses = await res.json();
+                renderList();
+            } catch (e) {
+                list.innerHTML = `<p class="text-center text-red-500 py-10">Connection Error. Please check your internet.</p>`;
+            }
+        }
+
+        function renderList() {
+            const selMonth = document.getElementById('monthFilter').value;
+            const list = document.getElementById('expenseList');
+            const totalDisplay = document.getElementById('monthTotal');
+            
+            const filtered = expenses.filter(item => item.Date.startsWith(selMonth));
+            let total = 0;
+
+            list.innerHTML = filtered.length ? '' : `
+                <div class="text-center py-20 bg-white rounded-3xl border border-dashed border-slate-300">
+                    <i class="fas fa-folder-open text-slate-200 text-5xl mb-4"></i>
+                    <p class="text-slate-400 font-medium">No records found for this month</p>
+                </div>`;
+
+            filtered.sort((a, b) => new Date(b.Date) - new Date(a.Date)).forEach(item => {
+                const costVal = parseFloat(item.Cost || 0);
+                total += costVal;
+                
+                list.innerHTML += `
+                    <div class="bg-white p-5 rounded-3xl shadow-sm border border-slate-100 flex justify-between items-center group animate-fade-in">
+                        <div class="flex gap-4 items-center">
+                            <div class="w-12 h-12 rounded-2xl ${item.Type === 'Meal' ? 'bg-orange-50 text-orange-500' : 'bg-blue-50 text-blue-500'} flex items-center justify-center text-lg shadow-inner">
+                                <i class="fas ${item.Type === 'Meal' ? 'fa-utensils' : 'fa-motorcycle'}"></i>
+                            </div>
+                            <div>
+                                <p class="text-[10px] text-slate-400 font-black uppercase tracking-tighter mb-0.5">${formatDisplayDate(item.Date)}</p>
+                                <p class="font-bold text-slate-800 leading-tight">${item.From} <span class="text-blue-400 mx-0.5">→</span> ${item.To}</p>
+                                <p class="text-[10px] text-slate-500 font-medium mt-1">${item.Type.toUpperCase()} ${item.isRoundTrip === 'YES' ? '• ROUND TRIP' : ''}</p>
+                            </div>
+                        </div>
+                        <div class="text-right flex items-center gap-5">
+                            <div class="font-black text-slate-900 text-lg">৳${costVal || '-'}</div>
+                            <button onclick="deleteEntry('${item.RowID}')" class="w-8 h-8 rounded-full bg-red-50 text-red-300 hover:text-red-500 transition-colors flex items-center justify-center">
+                                <i class="fas fa-trash-alt text-xs"></i>
+                            </button>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            totalDisplay.innerText = `৳ ${total}`;
+            const dateObj = new Date(selMonth + "-01");
+            document.getElementById('selectedMonthText').innerText = `${dateObj.toLocaleString('default', { month: 'long', year: 'numeric' })} Summary`;
+        }
+
+        async function deleteEntry(rowId) {
+            if(!confirm("Permanently delete this record?")) return;
+            await fetch(API_URL, { method: 'POST', body: JSON.stringify({ action: 'DELETE', rowId: rowId }) });
+            loadData();
+        }
+
+        document.getElementById('expenseForm').onsubmit = async (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('saveBtn');
+            btn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> Saving...';
+            btn.disabled = true;
+
+            const data = {
+                date: document.getElementById('date').value,
+                from: document.getElementById('from').value,
+                to: document.getElementById('to').value,
+                type: document.getElementById('type').value,
+                cost: document.getElementById('cost').value,
+                isRoundTrip: document.getElementById('isRoundTrip').checked ? "YES" : "NO"
+            };
+
+            await fetch(API_URL, { method: 'POST', body: JSON.stringify(data) });
+            
+            closeModal();
+            btn.innerText = "Save Expense";
+            btn.disabled = false;
+            document.getElementById('expenseForm').reset();
+            document.getElementById('date').valueAsDate = new Date();
+            loadData();
+        };
+
+        function openModal() { document.getElementById('modal').classList.remove('hidden'); }
+        function closeModal() { document.getElementById('modal').classList.add('hidden'); }
+        
+        function formatDisplayDate(dateStr) {
+            const d = new Date(dateStr);
+            return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+        }
+
+        // PDF Generation logic tailored to your office template
+        function generatePDF() {
+            const selMonth = document.getElementById('monthFilter').value;
+            const filtered = expenses.filter(item => item.Date.startsWith(selMonth))
+                             .sort((a, b) => new Date(a.Date) - new Date(b.Date));
+            
+            if(!filtered.length) return alert("Nothing to export for this month");
+
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            
+            const dateObj = new Date(selMonth + "-01");
+            const monthLabel = dateObj.toLocaleString('default', { month: 'long', year: 'numeric' });
+
+            // Brothers Corp Branding
+            doc.setFont("helvetica", "bold");
+            doc.setFontSize(22);
+            doc.text("Brothers Corporation Ltd.", 105, 18, { align: "center" });
+            
+            doc.setFontSize(14);
+            doc.setFont("helvetica", "normal");
+            doc.setFillColor(235, 243, 255);
+            doc.rect(15, 23, 180, 8, 'F');
+            doc.text("Conveyance Bill", 105, 29, { align: "center" });
+
+            doc.setFontSize(11);
+            doc.text(`Name : Khaled Jamil`, 15, 42);
+            doc.setFont("helvetica", "bold");
+            doc.text(`${monthLabel}`, 195, 42, { align: "right" });
+
+            const tableRows = [];
+            let grandTotal = 0;
+
+            filtered.forEach(item => {
+                tableRows.push([
+                    formatDisplayDate(item.Date), 
+                    item.From, 
+                    item.To, 
+                    item.Type, 
+                    item.Cost ? parseInt(item.Cost) : ""
+                ]);
+                if(item.Cost) grandTotal += parseFloat(item.Cost);
+            });
+
+            doc.autoTable({
+                startY: 48,
+                head: [['Date', 'From', 'To', 'Type', 'Cost']],
+                body: tableRows,
+                theme: 'grid',
+                headStyles: { fillColor: [255, 255, 255], textColor: [0, 0, 0], lineWidth: 0.1, fontStyle: 'bold' },
+                styles: { fontSize: 9, cellPadding: 4, font: 'helvetica' },
+                columnStyles: { 4: { halign: 'center', fontStyle: 'bold' } },
+                foot: [['', '', 'Total', '', grandTotal]],
+                footStyles: { fillColor: [240, 240, 240], textColor: [0, 0, 0], fontStyle: 'bold', halign: 'center' }
+            });
+
+            doc.save(`Conveyance_Bill_${selMonth}.pdf`);
+        }
+    </script>
+</body>
+</html>
